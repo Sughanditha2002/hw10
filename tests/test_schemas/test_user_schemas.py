@@ -1,69 +1,98 @@
-from builtins import str
 import pytest
 from pydantic import ValidationError
-from datetime import datetime
-from app.schemas.user_schemas import UserBase, UserCreate, UserUpdate, UserResponse, UserListResponse, LoginRequest
+from uuid import uuid4
+from app.schemas.user_schemas import UserBase, UserCreate, UserUpdate, UserResponse, LoginRequest, UserListResponse
+from app.schemas.user_schemas import UserRole
 
-# Tests for UserBase
-def test_user_base_valid(user_base_data):
-    user = UserBase(**user_base_data)
-    assert user.nickname == user_base_data["nickname"]
-    assert user.email == user_base_data["email"]
+# ✅ Base valid data for reuse
+base_valid_data = {
+    "email": "test@example.com",
+    "nickname": "valid_user",
+    "first_name": "Test",
+    "last_name": "User",
+    "bio": "Just testing.",
+    "profile_picture_url": "https://example.com/pic.jpg",
+    "linkedin_profile_url": "https://linkedin.com/in/testuser",
+    "github_profile_url": "https://github.com/testuser"
+}
 
-# Tests for UserCreate
-def test_user_create_valid(user_create_data):
-    user = UserCreate(**user_create_data)
-    assert user.nickname == user_create_data["nickname"]
-    assert user.password == user_create_data["password"]
+def test_user_base_valid():
+    user = UserBase(**base_valid_data)
+    assert user.email == base_valid_data["email"]
+    assert user.nickname == base_valid_data["nickname"]
 
-# Tests for UserUpdate
-def test_user_update_valid(user_update_data):
-    user_update = UserUpdate(**user_update_data)
-    assert user_update.email == user_update_data["email"]
-    assert user_update.first_name == user_update_data["first_name"]
+def test_user_base_invalid_email():
+    data = base_valid_data.copy()
+    data["email"] = "invalid-email"
+    with pytest.raises(ValidationError):
+        UserBase(**data)
 
-# Tests for UserResponse
-def test_user_response_valid(user_response_data):
-    user = UserResponse(**user_response_data)
-    assert user.id == user_response_data["id"]
-    # assert user.last_login_at == user_response_data["last_login_at"]
-
-# Tests for LoginRequest
-def test_login_request_valid(login_request_data):
-    login = LoginRequest(**login_request_data)
-    assert login.email == login_request_data["email"]
-    assert login.password == login_request_data["password"]
-
-# Parametrized tests for nickname and email validation
-@pytest.mark.parametrize("nickname", ["test_user", "test-user", "testuser123", "123test"])
-def test_user_base_nickname_valid(nickname, user_base_data):
-    user_base_data["nickname"] = nickname
-    user = UserBase(**user_base_data)
+@pytest.mark.parametrize("nickname", ["valid_user", "user123", "u_nder-score"])
+def test_nickname_valid(nickname):
+    data = base_valid_data.copy()
+    data["nickname"] = nickname
+    user = UserBase(**data)
     assert user.nickname == nickname
 
-@pytest.mark.parametrize("nickname", ["test user", "test?user", "", "us"])
-def test_user_base_nickname_invalid(nickname, user_base_data):
-    user_base_data["nickname"] = nickname
+@pytest.mark.parametrize("nickname", ["invalid user", "no$", "", "12"])
+def test_nickname_invalid(nickname):
+    data = base_valid_data.copy()
+    data["nickname"] = nickname
     with pytest.raises(ValidationError):
-        UserBase(**user_base_data)
+        UserBase(**data)
 
-# Parametrized tests for URL validation
-@pytest.mark.parametrize("url", ["http://valid.com/profile.jpg", "https://valid.com/profile.png", None])
-def test_user_base_url_valid(url, user_base_data):
-    user_base_data["profile_picture_url"] = url
-    user = UserBase(**user_base_data)
+@pytest.mark.parametrize("url", ["http://valid.com", "https://site.org", None])
+def test_url_valid(url):
+    data = base_valid_data.copy()
+    data["profile_picture_url"] = url
+    user = UserBase(**data)
     assert user.profile_picture_url == url
 
-@pytest.mark.parametrize("url", ["ftp://invalid.com/profile.jpg", "http//invalid", "https//invalid"])
-def test_user_base_url_invalid(url, user_base_data):
-    user_base_data["profile_picture_url"] = url
+@pytest.mark.parametrize("url", ["ftp://bad.com", "https//missingcolon.com", "invalid"])
+def test_url_invalid(url):
+    data = base_valid_data.copy()
+    data["profile_picture_url"] = url
     with pytest.raises(ValidationError):
-        UserBase(**user_base_data)
+        UserBase(**data)
 
-# Tests for UserBase
-def test_user_base_invalid_email(user_base_data_invalid):
-    with pytest.raises(ValidationError) as exc_info:
-        user = UserBase(**user_base_data_invalid)
-    
-    assert "value is not a valid email address" in str(exc_info.value)
-    assert "john.doe.example.com" in str(exc_info.value)
+def test_user_create_valid():
+    data = base_valid_data.copy()
+    data["password"] = "StrongP@ss123"
+    user = UserCreate(**data)
+    assert user.password == data["password"]
+
+def test_user_update_requires_one_field():
+    with pytest.raises(ValidationError):
+        UserUpdate()
+
+def test_login_request_valid():
+    login = LoginRequest(email="user@example.com", password="123456")
+    assert login.email == "user@example.com"
+    assert login.password == "123456"
+
+def test_user_response_valid():
+    data = base_valid_data.copy()
+    data.update({
+        "id": uuid4(),
+        "role": UserRole.AUTHENTICATED,
+        "is_professional": True
+    })
+    user = UserResponse(**data)
+    assert user.email == data["email"]
+    assert user.role == UserRole.AUTHENTICATED
+
+def test_user_list_response_valid():
+    item = {
+        **base_valid_data,
+        "id": uuid4(),
+        "role": UserRole.AUTHENTICATED,
+        "is_professional": False
+    }
+    response = UserListResponse(
+        items=[UserResponse(**item)],
+        total=1,
+        page=1,
+        size=10
+    )
+    assert response.total == 1
+    assert isinstance(response.items[0], UserResponse)
