@@ -19,37 +19,6 @@ def validate_url(url: Optional[str]) -> Optional[str]:
         raise ValueError('Invalid URL format')
     return url
 
-<<<<<<< HEAD
-def validate_password(value):
-    """Validate password complexity requirements."""
-    # Ensure password meets complexity requirements
-    if not any(c.islower() for c in value):
-        raise ValueError("Password must contain at least one lowercase letter.")
-    if not any(c.isupper() for c in value):
-        raise ValueError("Password must contain at least one uppercase letter.")
-    if not any(c in "!@#$%^&*()_+-=[]{}|;':\",.<>?/`~" for c in value):
-        raise ValueError("Password must contain at least one special character.")
-    return value
-
-class UserBase(BaseModel):
-    email: EmailStr
-    nickname: Optional[str] = Field(None, min_length=3, pattern=r'^[\w-]+$')
-    first_name: Optional[str]
-    last_name: Optional[str]
-    bio: Optional[str]
-    profile_picture_url: Optional[str]
-    linkedin_profile_url: Optional[str]
-    github_profile_url: Optional[str]
-
-    _validate_urls = validator(
-        'profile_picture_url',
-        'linkedin_profile_url',
-        'github_profile_url',
-        pre=True,
-        allow_reuse=True
-    )(validate_url)
-
-=======
 class UserBase(BaseModel):
     email: EmailStr = Field(..., example="john.doe@example.com")
     nickname: Optional[str] = Field(None, min_length=3, pattern=r'^[\w-]+$', example=generate_nickname())
@@ -68,7 +37,6 @@ class UserBase(BaseModel):
         allow_reuse=True
     )(validate_url)
 
->>>>>>> 3-smtpserver
     class Config:
         from_attributes = True
 
