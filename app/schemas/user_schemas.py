@@ -44,8 +44,6 @@ class UserCreate(UserBase):
     password: str
 
 class UserUpdate(UserBase):
-    email: Optional[EmailStr]
-
     @root_validator(pre=True)
     def at_least_one_non_null(cls, values):
         if not any(v is not None for v in values.values()):
@@ -58,9 +56,9 @@ class UserResponse(UserBase):
     is_professional: Optional[bool] = Field(default=False)
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
-    
+    email: EmailStr = Field(..., example="test@example.com")
+    password: str = Field(..., example="MyPass123")
+
 class UserListResponse(BaseModel):
     items: List[UserResponse]
     total: int
